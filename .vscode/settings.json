@@ -5,6 +5,9 @@
         "dynamicLagrangian.C": "cpp",
         "WALE.C": "cpp",
         "kEqn.C": "cpp",
-        "LESeddyViscosity.C": "cpp"
+        "LESeddyViscosity.C": "cpp",
+        "eddyViscosity.C": "cpp",
+        "smoothDelta.C": "cpp",
+        "Smagorinsky.C": "cpp"
     }
 }
