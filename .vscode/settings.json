@@ -1,3 +1,10 @@
 {
-    "git.ignoreLimitWarning": true
+    "git.ignoreLimitWarning": true,
+    "files.associations": {
+        "LESModel.C": "cpp",
+        "dynamicLagrangian.C": "cpp",
+        "WALE.C": "cpp",
+        "kEqn.C": "cpp",
+        "LESeddyViscosity.C": "cpp"
+    }
 }
