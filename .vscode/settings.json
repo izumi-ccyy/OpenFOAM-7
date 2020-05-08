@@ -8,6 +8,7 @@
         "LESeddyViscosity.C": "cpp",
         "eddyViscosity.C": "cpp",
         "smoothDelta.C": "cpp",
-        "Smagorinsky.C": "cpp"
+        "Smagorinsky.C": "cpp",
+        "dimensionedSymmTensor.C": "cpp"
     }
 }

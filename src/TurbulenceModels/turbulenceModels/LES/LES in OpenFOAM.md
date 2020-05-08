@@ -290,3 +290,161 @@ $$
 $$
 \frac{\partial (\rho k)}{\partial t} + \nabla \cdot (\rho \mathbf{U} k) - \nabla \cdot (\rho D_{k, Eff} \nabla k) = \rho G - \frac{2}{3} \rho \nabla \cdot \mathbf{U} k - \frac{C_e \rho \sqrt{k}}{\Delta} k + k
 $$
+
+## The Smagorinsky SGS model
+
+Description
+
+    The Smagorinsky SGS model.
+
+    Reference:
+    \verbatim
+        Smagorinsky, J. (1963).
+        General circulation experiments with the primitive equations: I.
+        The basic experiment*.
+        Monthly weather review, 91(3), 99-164.
+    \endverbatim
+
+    The form of the Smagorinsky model implemented is obtained from the
+    k-equation model assuming local equilibrium which provides estimates of both
+    k and epsilon separate from the sub-grid scale viscosity:
+
+    \verbatim
+        B = 2/3*k*I - 2*nuSgs*dev(D)
+
+    where
+
+        D = symm(grad(U));
+        k from D:B + Ce*k^3/2/delta = 0
+        nuSgs = Ck*sqrt(k)*delta
+    \endverbatim
+
+    The default model coefficients are
+    \verbatim
+        SmagorinskyCoeffs
+        {
+            Ck                  0.094;
+            Ce                  1.048;
+        }
+    \endverbatim
+
+### Smagorinsky.H
+
+```cpp
+#include "LESModel.H"
+#include "LESeddyViscosity.H"
+```
+
+define `Ck_`
+
+```cpp
+dimensionedScalar Ck_;
+```
+
+Return SGS kinetic energy
+
+```cpp
+//- Return SGS kinetic energy
+virtual tmp<volScalarField> k() const
+{
+    return k(fvc::grad(this->U_));
+}
+```
+
+### Smagorinsky.C
+
+```cpp
+#include "Smagorinsky.H"
+#include "fvOptions.H"
+```
+
+defination of `k`
+
+```cpp
+template<class BasicTurbulenceModel>
+tmp<volScalarField> Smagorinsky<BasicTurbulenceModel>::k
+(
+    const tmp<volTensorField>& gradU
+) const
+{
+    volSymmTensorField D(symm(gradU));
+
+    volScalarField a(this->Ce_/this->delta());
+    volScalarField b((2.0/3.0)*tr(D));
+    volScalarField c(2*Ck_*this->delta()*(dev(D) && D));
+
+    return volScalarField::New
+    (
+        IOobject::groupName("k", this->alphaRhoPhi_.group()),
+        sqr((-b + sqrt(sqr(b) + 4*a*c))/(2*a))
+    );
+}
+```
+
+$$
+symm(\mathbf{T}) = \frac{1}{2} (T + T^T)
+$$
+
+$$
+\mathbf{D} = \frac{1}{2} (\nabla \mathbf {U} + \nabla \mathbf {U}^T)
+$$
+
+$$
+a = \frac{C_e}{\Delta}
+$$
+
+$$
+b = \frac{2}{3} \nabla \cdot \mathbf{U}
+$$
+
+$$
+dev(\mathbf D) = \mathbf D - \frac{1}{3}tr(\mathbf D) \mathbf I = \frac{1}{2} (\nabla \mathbf {U} + \nabla \mathbf {U}^T) - \frac{1}{3} \nabla \cdot \mathbf{U} \mathbf I
+$$
+
+$$
+c = 2 C_k \Delta \left(dev(\mathbf{D}) : \mathbf{D} \right)
+$$
+
+$$
+k = \left(\frac{-b + \sqrt{b^2 + 4ac}}{2a}\right)^2
+$$
+
+Correct $\nu_t$
+
+```cpp
+template<class BasicTurbulenceModel>
+void Smagorinsky<BasicTurbulenceModel>::correctNut()
+{
+    volScalarField k(this->k(fvc::grad(this->U_)));
+
+    this->nut_ = Ck_*this->delta()*sqrt(k);
+    this->nut_.correctBoundaryConditions();
+    fv::options::New(this->mesh_).correct(this->nut_);
+
+    BasicTurbulenceModel::correctNut();
+}
+```
+
+$$
+\nu_t = C_k \Delta \sqrt{k}
+$$
+
+Calculate $\epsilon$
+
+```cpp
+template<class BasicTurbulenceModel>
+tmp<volScalarField> Smagorinsky<BasicTurbulenceModel>::epsilon() const
+{
+    volScalarField k(this->k(fvc::grad(this->U_)));
+
+    return volScalarField::New
+    (
+        IOobject::groupName("epsilon", this->alphaRhoPhi_.group()),
+        this->Ce_*k*sqrt(k)/this->delta()
+    );
+}
+```
+
+$$
+\epsilon = \frac{C_e k \sqrt{k}}{\Delta}
+$$
